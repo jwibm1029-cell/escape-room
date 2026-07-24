@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>해적 선장의 비밀 방탈출</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="game-container">
+    <!-- 배경 이미지 -->
+    <img src="pirate_cartographer_room_bg.png" alt="해적 선실 배경" class="bg-image">
+
+    <!-- 클릭 가능한 인터랙션 영역 (Hotspot) -->
+    <div class="hotspot bookshelf" onclick="inspectBookshelf()" title="책장 살펴보기"></div>
+    <div class="hotspot map" onclick="inspectMap()" title="책상 위 지도 조사하기"></div>
+    <div class="hotspot chest" onclick="inspectChest()" title="보물상자 열기"></div>
+
+    <!-- 인벤토리 영역 -->
+    <div class="inventory">
+      <span>🎒 소지품: </span>
+      <span id="inventory-item">없음</span>
+    </div>
+
+    <!-- 모달(팝업) 창 -->
+    <div id="modal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="modal-title">조사하기</h3>
+        <p id="modal-text"></p>
+        <div id="modal-input-container" class="hidden">
+          <input type="text" id="passcode-input" placeholder="4자리 암호 입력">
+          <button onclick="checkPasscode()">입력</button>
+        </div>
+        <button class="close-btn" onclick="closeModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
