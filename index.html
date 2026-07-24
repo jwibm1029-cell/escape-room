@@ -4,31 +4,186 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>해적 선장의 비밀 방탈출</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none; /* 드래그로 블록 지정되는 현상 방지 */
+    }
+
+    body {
+      background-color: #1a1a1a;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .game-container {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      aspect-ratio: 16 / 9;
+      border: 4px solid #4a3728;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    }
+
+    .bg-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* 클릭 가능한 인터랙션 영역 (Hotspot) */
+    .hotspot {
+      position: absolute;
+      cursor: pointer;
+      border: 2px dashed transparent;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .hotspot:hover {
+      border-color: rgba(255, 215, 0, 0.8);
+      background-color: rgba(255, 215, 0, 0.15);
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+
+    /* 위치 지정 */
+    .bookshelf {
+      top: 10%;
+      left: 2%;
+      width: 18%;
+      height: 70%;
+    }
+
+    .map {
+      top: 50%;
+      left: 28%;
+      width: 18%;
+      height: 18%;
+    }
+
+    .chest {
+      top: 58%;
+      left: 75%;
+      width: 20%;
+      height: 30%;
+    }
+
+    /* 인벤토리 */
+    .inventory {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: 1px solid #d4af37;
+      font-size: 15px;
+      z-index: 20;
+    }
+
+    /* 모달 팝업 */
+    .modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .modal-content {
+      background: #2b1d14;
+      border: 2px solid #d4af37;
+      padding: 24px;
+      border-radius: 8px;
+      text-align: center;
+      max-width: 320px;
+      width: 90%;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+
+    .modal-content h3 {
+      margin-bottom: 12px;
+      color: #f1c40f;
+    }
+
+    .modal-content p {
+      margin-bottom: 16px;
+      line-height: 1.5;
+      font-size: 15px;
+      color: #e0e0e0;
+    }
+
+    #modal-input-container {
+      margin-bottom: 16px;
+    }
+
+    #modal-input-container input {
+      padding: 8px;
+      width: 120px;
+      text-align: center;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #d4af37;
+      background: #1a1a1a;
+      color: #fff;
+    }
+
+    #modal-input-container button, .close-btn {
+      padding: 8px 16px;
+      margin-left: 6px;
+      background-color: #d4af37;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      color: #000;
+    }
+
+    .close-btn {
+      background-color: #555;
+      color: white;
+      margin-left: 0;
+    }
+  </style>
 </head>
 <body>
   <div class="game-container">
     <!-- 배경 이미지 -->
     <img src="pirate_cartographer_room_bg.png" alt="해적 선실 배경" class="bg-image">
 
-    <!-- 클릭 가능한 인터랙션 영역 (Hotspot) -->
+    <!-- 클릭 영역 -->
     <div class="hotspot bookshelf" onclick="inspectBookshelf()" title="책장 살펴보기"></div>
     <div class="hotspot map" onclick="inspectMap()" title="책상 위 지도 조사하기"></div>
     <div class="hotspot chest" onclick="inspectChest()" title="보물상자 열기"></div>
 
-    <!-- 인벤토리 영역 -->
+    <!-- 인벤토리 -->
     <div class="inventory">
       <span>🎒 소지품: </span>
       <span id="inventory-item">없음</span>
     </div>
 
-    <!-- 모달(팝업) 창 -->
+    <!-- 팝업 창 -->
     <div id="modal" class="modal hidden">
       <div class="modal-content">
         <h3 id="modal-title">조사하기</h3>
         <p id="modal-text"></p>
         <div id="modal-input-container" class="hidden">
-          <input type="text" id="passcode-input" placeholder="4자리 암호 입력">
+          <input type="text" id="passcode-input" placeholder="4자리 암호">
           <button onclick="checkPasscode()">입력</button>
         </div>
         <button class="close-btn" onclick="closeModal()">닫기</button>
@@ -36,6 +191,82 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    let hasKey = false;
+    let isEscaped = false;
+
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalText = document.getElementById('modal-text');
+    const inputContainer = document.getElementById('modal-input-container');
+    const passcodeInput = document.getElementById('passcode-input');
+    const inventoryItem = document.getElementById('inventory-item');
+
+    function showModal(title, text) {
+      modalTitle.textContent = title;
+      modalText.textContent = text;
+      modal.classList.remove('hidden');
+    }
+
+    function inspectBookshelf() {
+      showModal(
+        "오래된 책장",
+        "책장을 살펴보니 먼지 쌓인 해적 일지 표지에 의미심장한 숫자 '1715'가 새겨져 있습니다."
+      );
+    }
+
+    function inspectMap() {
+      if (hasKey) {
+        showModal("책상 위 지도", "지도 암호를 이미 풀어 열쇠를 획득했습니다.");
+      } else {
+        showModal(
+          "비밀 지도",
+          "지도 구석에 자물쇠 그림과 함께 4자리 비밀번호를 입력하는 장치가 있습니다."
+        );
+        inputContainer.classList.remove('hidden');
+      }
+    }
+
+    function inspectChest() {
+      if (isEscaped) {
+        showModal("탈출 성공!", "이미 상자를 열고 탈출에 성공했습니다!");
+        return;
+      }
+
+      if (hasKey) {
+        isEscaped = true;
+        showModal(
+          "🎉 방탈출 성공!",
+          "황금 열쇠로 보물상자를 열었습니다! 상자 안에서 탈출용 나침반과 방 열쇠를 찾아 무사히 탈출했습니다!"
+        );
+      } else {
+        showModal(
+          "잠긴 보물상자",
+          "묵직한 쇠사슬로 잠겨 있습니다. 맞는 열쇠가 필요한 것 같습니다."
+        );
+      }
+    }
+
+    function checkPasscode() {
+      const code = passcodeInput.value.trim();
+      if (code === "1715") {
+        hasKey = true;
+        inventoryItem.textContent = "🔑 황금 열쇠";
+        inventoryItem.style.color = "#f1c40f";
+        showModal(
+          "암호 해독 성공!",
+          "지도의 비밀 칸이 열리며 [황금 열쇠]를 얻었습니다!"
+        );
+      } else {
+        alert("암호가 올바르지 않습니다. 다시 시도해보세요.");
+      }
+      passcodeInput.value = "";
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      inputContainer.classList.add('hidden');
+    }
+  </script>
 </body>
 </html>
